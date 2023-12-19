@@ -14,7 +14,7 @@ int main(int argc, char** argv)
   3840x2160.jpg
   */
 
-  cv::Mat grey_image;
+  cv::Mat gray_image;
   
   int key = cv::waitKey( 0 ); 
 
@@ -53,7 +53,7 @@ int main(int argc, char** argv)
     }
   }
   double ende_rgb = omp_get_wtime();  // end time
-  grey_image = cv::Mat::zeros( rgb.size(), CV_8U );
+  gray_image = cv::Mat::zeros( rgb.size(), CV_8U );
   
   double start_gray = omp_get_wtime();
 
@@ -75,13 +75,13 @@ int main(int argc, char** argv)
           // some heavy workload here
 
           // write the pixel into the image at [i, j] as type 'unsigned 8-bit'
-          grey_image.at<uchar>( i, j ) = 0.21 * r + 0.72 * g + 0.07 * b;
+          gray_image.at<uchar>( i, j ) = 0.21 * r + 0.72 * g + 0.07 * b;
         }
       }
     }
 double ende_gray = omp_get_wtime();  // end time
 
-cv::Mat blur = grey_image.clone();  // Initialisiere blur mit einer Kopie von grey_image
+cv::Mat blur = gray_image.clone();  // Initialisiere blur mit einer Kopie von gray_image
 
 double start_blur = omp_get_wtime();
 #pragma omp parallel for
@@ -111,14 +111,14 @@ double ende_blur = omp_get_wtime();  // end time
     
 
 
-    //cv::GaussianBlur(grey_image, blur, cv::Size(15,15), 0);
+    //cv::GaussianBlur(gray_image, blur, cv::Size(15,15), 0);
     
   
 
   cv::imshow( "image", rgb ); 
   cv::waitKey(0);
   
-  cv::imshow( "Greyscale", grey_image );
+  cv::imshow( "Grayscale", gray_image );
   cv::waitKey(0);
   
   
