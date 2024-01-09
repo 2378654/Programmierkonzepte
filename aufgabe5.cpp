@@ -2,6 +2,8 @@
 #include <cstdio>
 #include <omp.h>
 #include "opencv2/opencv.hpp"
+#include <mpi.h>
+
 
 int main(int argc, char** argv)
 {   
@@ -18,7 +20,7 @@ int main(int argc, char** argv)
   
   int key = cv::waitKey( 0 ); 
 
-  double start_rgb = omp_get_wtime();
+  double start_rgb = omp_get_wtime(); //Startzeit für RGB Bild in Variable schreiben
   
   #pragma omp parallel for
   for ( int i = 0; i < rgb.rows; ++i ) {
@@ -52,10 +54,10 @@ int main(int argc, char** argv)
       rgb.at<cv::Vec3b>( i, j ) = pixel;
     }
   }
-  double ende_rgb = omp_get_wtime();  // end time
+  double ende_rgb = omp_get_wtime();  //Endzeit für RGB Bild in Variable schreiben
   gray_image = cv::Mat::zeros( rgb.size(), CV_8U );
   
-  double start_gray = omp_get_wtime();
+  double start_gray = omp_get_wtime(); //Startzeit für Grayscale Bild in Variable schreiben
 
   #pragma omp parallel for
     for ( int i = 0; i < rgb.rows; ++i ) {
@@ -79,11 +81,11 @@ int main(int argc, char** argv)
         }
       }
     }
-double ende_gray = omp_get_wtime();  // end time
+double ende_gray = omp_get_wtime();  //Endzeit für Grayscale Bild in Variable schreiben
 
 cv::Mat blur = gray_image.clone();  // Initialisiere blur mit einer Kopie von gray_image
 
-double start_blur = omp_get_wtime();
+double start_blur = omp_get_wtime(); //Startzeit für Blured Bild in Variable schreiben
 #pragma omp parallel for
 for (int x = 1; x < blur.rows - 1; ++x) {
     for (int y = 1; y < blur.cols - 1; ++y) {
@@ -100,7 +102,7 @@ for (int x = 1; x < blur.rows - 1; ++x) {
         blur.at<uchar>(x, y) = sum / 9;
     }
 }
-double ende_blur = omp_get_wtime();  // end time
+double ende_blur = omp_get_wtime();  //Endzeit für Blured Bild in Variable schreiben
     
     cv::Mat floatImage;
     blur.convertTo(floatImage, CV_32F);
@@ -108,13 +110,9 @@ double ende_blur = omp_get_wtime();  // end time
     // Konvertiere das Ergebnis zurück in den 8-Bit-Bereich für die Anzeige
     cv::Mat outputImage;
     blur.convertTo(outputImage, CV_8U);
-    
-
-
-    //cv::GaussianBlur(gray_image, blur, cv::Size(15,15), 0);
-    
   
-
+    //cv::GaussianBlur(gray_image, blur, cv::Size(15,15), 0); --> auch mit eigener OpenCV Funktion möglich
+    
   cv::imshow( "image", rgb ); 
   cv::waitKey(0);
   
@@ -126,8 +124,8 @@ double ende_blur = omp_get_wtime();  // end time
   cv::waitKey(0);
 
   
-  std::cout << "RGB: "<< (ende_rgb - start_rgb) << "\n";
-  std::cout << "Gray: " << (ende_gray - start_gray) << "\n";
-  std::cout << "Blur: "<< (ende_blur - start_blur) << "\n";
+  std::cout << "RGB: "<< (ende_rgb - start_rgb) << "\n"; //Laufzeit RGB
+  std::cout << "Gray: " << (ende_gray - start_gray) << "\n"; //Laufzeit Grayscale
+  std::cout << "Blur: "<< (ende_blur - start_blur) << "\n"; //Laufzeit Blured Bild
   cv::destroyAllWindows();
 }
