@@ -7,6 +7,18 @@
 
 int main(int argc, char** argv)
 {   
+  MPI_Init(&argc,&argv);
+  char processor_name[MPI_MAX_PROCESSOR_NAME];
+  int name_len;
+  MPI_Get_processor_name(processor_name, &name_len);
+
+  int world_size;
+  MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+
+  // Get the rank of the process
+  int world_rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+
   // read image
   cv::Mat rgb = cv::imread( "./1920x1080.jpg", cv::IMREAD_UNCHANGED ); 
   /*
@@ -20,6 +32,7 @@ int main(int argc, char** argv)
   
   int key = cv::waitKey( 0 ); 
 
+  double start_comp = omp_get_wtime();
   double start_rgb = omp_get_wtime(); //Startzeit für RGB Bild in Variable schreiben
   
   #pragma omp parallel for
@@ -103,7 +116,7 @@ for (int x = 1; x < blur.rows - 1; ++x) {
     }
 }
 double ende_blur = omp_get_wtime();  //Endzeit für Blured Bild in Variable schreiben
-    
+double ende_comp = omp_get_wtime(); 
     cv::Mat floatImage;
     blur.convertTo(floatImage, CV_32F);
 
@@ -122,10 +135,13 @@ double ende_blur = omp_get_wtime();  //Endzeit für Blured Bild in Variable schr
   
   cv::imshow("Blurred", blur);
   cv::waitKey(0);
-
-  
+  printf("=====Processor: %s, Rank: %d out of %d Processors=====\n", processor_name, world_rank, world_size);
+  //std::cout << "==========================================\n";
   std::cout << "RGB: "<< (ende_rgb - start_rgb) << "\n"; //Laufzeit RGB
   std::cout << "Gray: " << (ende_gray - start_gray) << "\n"; //Laufzeit Grayscale
   std::cout << "Blur: "<< (ende_blur - start_blur) << "\n"; //Laufzeit Blured Bild
+  std::cout << "Gesamt: "<< (ende_comp - start_comp) << "\n";
+  
   cv::destroyAllWindows();
+  MPI_Finalize();
 }
