@@ -20,7 +20,7 @@ int main(int argc, char** argv)
   MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
   // read image
-  cv::Mat rgb = cv::imread( "./1920x1080.jpg", cv::IMREAD_UNCHANGED ); 
+  cv::Mat rgb = cv::imread( "./960x540.jpg", cv::IMREAD_UNCHANGED ); 
   /*
   Getestete Bilder
   960x540.jpg
@@ -39,27 +39,11 @@ int main(int argc, char** argv)
   for ( int i = 0; i < rgb.rows; ++i ) {
     for ( int j = 0; j < rgb.cols; ++j ) {
 
-      // get pixel at [i, j] as a <B,G,R> vector
       cv::Vec3b pixel = rgb.at<cv::Vec3b>( i, j );
 
-      // extract the pixels as uchar (unsigned 8-bit) types (0..255)
       uchar b = pixel[0];
       uchar g = pixel[1];
       uchar r = pixel[2];   
-
-      // Note: this is actually the slowest way to extract a pixel in OpenCV
-      // Using pointers like this:
-      //   uchar* ptr = (uchar*) image.data; // get raw pointer to the image data
-      //   ...
-      //   for (...) { 
-      //       uchar* pixel = ptr + image.channels() * (i * image.cols + j);
-      //       uchar b = *(pixel + 0); // Blue
-      //       uchar g = *(pixel + 1); // Green
-      //       uchar r = *(pixel + 2); // Red
-      //       uchar a = *(pixel + 3); // (optional) if there is an Alpha channel
-      //   }
-      // is much faster
-      
       uchar temp = r;
       r = b;
       b = temp;
@@ -76,25 +60,20 @@ int main(int argc, char** argv)
     for ( int i = 0; i < rgb.rows; ++i ) {
       for ( int j = 0; j < rgb.cols; ++j ) {
 
-        // get pixel at [i, j] as a <B,G,R> vector
         cv::Vec3b pixel = rgb.at<cv::Vec3b>( i, j );
 
-        // extract the pixels as uchar (unsigned 8-bit) types (0..255)
         uchar b = pixel[0];
         uchar g = pixel[1];
         uchar r = pixel[2];
-
+        
         // convert to Grayscale
         for ( int k = 0; k < 150; k++ )
         {
-          // some heavy workload here
-
-          // write the pixel into the image at [i, j] as type 'unsigned 8-bit'
           gray_image.at<uchar>( i, j ) = 0.21 * r + 0.72 * g + 0.07 * b;
         }
       }
     }
-double ende_gray = omp_get_wtime();  //Endzeit für Grayscale Bild in Variable schreiben
+double ende_gray = omp_get_wtime();   //Endzeit für Grayscale Bild in Variable schreiben
 
 cv::Mat blur = gray_image.clone();  // Initialisiere blur mit einer Kopie von gray_image
 
@@ -116,31 +95,30 @@ for (int x = 1; x < blur.rows - 1; ++x) {
     }
 }
 double ende_blur = omp_get_wtime();  //Endzeit für Blured Bild in Variable schreiben
-double ende_comp = omp_get_wtime(); 
-    cv::Mat floatImage;
-    blur.convertTo(floatImage, CV_32F);
+double ende_comp = omp_get_wtime();  //Endzeit für Gesamte Ausführung in Variable schreiben
 
-    // Konvertiere das Ergebnis zurück in den 8-Bit-Bereich für die Anzeige
-    cv::Mat outputImage;
-    blur.convertTo(outputImage, CV_8U);
-  
-    //cv::GaussianBlur(gray_image, blur, cv::Size(15,15), 0); --> auch mit eigener OpenCV Funktion möglich
+  //cv::GaussianBlur(gray_image, blur, cv::Size(15,15), 0); --> auch mit eigener OpenCV Funktion möglich
     
   cv::imshow( "image", rgb ); 
   cv::waitKey(0);
+  cv::imwrite( "RGB_Image.jpg", rgb );
   
   cv::imshow( "Grayscale", gray_image );
   cv::waitKey(0);
-  
-  
+  cv::imwrite( "Grayscale_Image.jpg", gray_image );  
+
   cv::imshow("Blurred", blur);
   cv::waitKey(0);
+  cv::imwrite( "Blurred_Image.jpg", blur );
+
+
   printf("=====Processor: %s, Rank: %d out of %d Processors=====\n", processor_name, world_rank, world_size);
   //std::cout << "==========================================\n";
   std::cout << "RGB: "<< (ende_rgb - start_rgb) << "\n"; //Laufzeit RGB
   std::cout << "Gray: " << (ende_gray - start_gray) << "\n"; //Laufzeit Grayscale
   std::cout << "Blur: "<< (ende_blur - start_blur) << "\n"; //Laufzeit Blured Bild
   std::cout << "Gesamt: "<< (ende_comp - start_comp) << "\n";
+  std::cout << "Threads Used: " << omp_get_max_threads() << "\n";
   
   cv::destroyAllWindows();
   MPI_Finalize();
