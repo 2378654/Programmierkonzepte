@@ -1,5 +1,7 @@
 # Programmierkonzepte
 
+Um ein anderes Bild zu wechseln: Bei Zeile 25 eine der drei JPEG auswählen.
+
 Makefile wurde benutzt, um das Program lokal auszuführen.
 Dafür werden allerdings lokale Pfade verwendet, weshalb es nicht auf anderen Systemen funktioniert.
 Um das Programm zu kompilieren:
