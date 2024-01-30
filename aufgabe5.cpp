@@ -7,25 +7,20 @@
 
 int main(int argc, char** argv)
 {   
-  int buffer;
   int image_properties[4];
   int image_properties_gray[4];
 
-  //Initialize MPI_Init
-  MPI_Init(&argc,&argv);
+  MPI_Init(&argc,&argv); //Initialisieren von MPI
 
-  //Get processor Name
-  char processor_name[MPI_MAX_PROCESSOR_NAME];
+  char processor_name[MPI_MAX_PROCESSOR_NAME]; //Name des Prozessors
 
   int name_len;
   MPI_Get_processor_name(processor_name, &name_len);
 
-  //Get total Number of Processes 
-  int world_size;
+  int world_size; //Gesamtmenge der Prozesse
   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 
-  //Get rank of the process
-  int world_rank;
+  int world_rank; //Rang des momentanen Prozesses
   MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
   cv::Mat rgb = cv::imread( "./3840x2160.jpg", cv::IMREAD_UNCHANGED );
     /*
@@ -51,7 +46,7 @@ int main(int argc, char** argv)
 
   MPI_Barrier( MPI_COMM_WORLD ); //Synchronisieren der Prozesse
 
-  MPI_Bcast( image_properties, 4, MPI_INT, 0, MPI_COMM_WORLD ); //Broadcast vom Master-Prozess (0) zu allen anderen Prozessen
+  MPI_Bcast( image_properties, 4, MPI_INT, 0, MPI_COMM_WORLD ); //Broadcast von den gesamten Daten vom Master-Prozess (0) zu allen anderen Prozessen
 
   cv::Mat part_image = cv::Mat( image_properties[1], image_properties[0], image_properties[2] );
 
@@ -61,7 +56,7 @@ int main(int argc, char** argv)
 
   MPI_Scatter( rgb.data, send_size, MPI_UNSIGNED_CHAR,
                part_image.data, send_size, MPI_UNSIGNED_CHAR,
-               0, MPI_COMM_WORLD ); // from process #0
+               0, MPI_COMM_WORLD ); //Verteilen der Daten auf verschiedene Prozesse
 
   #pragma omp parallel for
   for ( int i = 0; i < rgb.rows; ++i ) {
@@ -81,33 +76,12 @@ int main(int argc, char** argv)
   }
 
   double ende_rgb = omp_get_wtime();  //Endzeit für RGB Bild in Variable schreiben
+  
   gray_image = cv::Mat::zeros( rgb.size(), CV_8U );
   
   double start_gray = omp_get_wtime(); //Startzeit für Grayscale Bild in Variable schreiben
 
-  if ( world_rank == 0 ) {
-    image_properties_gray[0] = gray_image.cols;
-    image_properties_gray[1] = gray_image.rows / world_size; 
-    image_properties_gray[2] = gray_image.type(); 
-    image_properties_gray[3] = gray_image.channels(); 
-  }
-
-  MPI_Barrier( MPI_COMM_WORLD);
-
-  MPI_Bcast( image_properties_gray, 4, MPI_INT, 0, MPI_COMM_WORLD );
-
-  cv::Mat part_image_gray = cv::Mat( image_properties_gray[1], image_properties_gray[0], image_properties_gray[2] );
-
-  MPI_Barrier( MPI_COMM_WORLD );
-
-  int send_size_gray = image_properties_gray[1] * image_properties_gray[0] * image_properties_gray[3];
-
-  MPI_Scatter( gray_image.data, send_size_gray, MPI_UNSIGNED_CHAR, 
-               part_image_gray.data, send_size_gray, MPI_UNSIGNED_CHAR,
-               0, MPI_COMM_WORLD ); //Daten des Grayscale Bildes an alle Prozesse verteilen
- 
-
-  #pragma omp parallel for
+    #pragma omp parallel for
     for ( int i = 0; i < rgb.rows; ++i ) {
       for ( int j = 0; j < rgb.cols; ++j ) {
         cv::Vec3b pixel = rgb.at<cv::Vec3b>( i, j );
@@ -122,7 +96,7 @@ int main(int argc, char** argv)
     
 double ende_gray = omp_get_wtime();   //Endzeit für Grayscale Bild in Variable schreiben
 
-cv::Mat blur = gray_image.clone();  // Initialisiere blur mit einer Kopie von gray_image
+cv::Mat blur = gray_image.clone();  //Initialisiere blur mit einer Kopie von gray_image
 
 double start_blur = omp_get_wtime(); //Startzeit für Blured Bild in Variable schreiben
 /*
@@ -150,11 +124,6 @@ cv::Size kernelSize(15,15);
 cv::blur(blur, blur, kernelSize); //Viel schneller weil keine For-Loops mehr verwendet werden
 double ende_blur = omp_get_wtime();  //Endzeit für Blured Bild in Variable schreiben
 
-MPI_Gather( part_image_gray.data, send_size_gray, MPI_UNSIGNED_CHAR,
-              rgb.data, send_size_gray, MPI_UNSIGNED_CHAR,
-              0, MPI_COMM_WORLD );
-
-
 MPI_Gather( part_image.data, send_size, MPI_UNSIGNED_CHAR,
               rgb.data, send_size, MPI_UNSIGNED_CHAR,
               0, MPI_COMM_WORLD );
@@ -165,7 +134,7 @@ double ende_comp = omp_get_wtime();  //Endzeit für Gesamte Ausführung in Varia
   cv::imshow( "image", rgb ); 
   cv::waitKey(0);
   cv::imwrite( "RGB_Image.jpg", rgb );
-  
+
   cv::imshow( "Grayscale", gray_image );
   cv::waitKey(0);
   cv::imwrite( "Grayscale_Image.jpg", gray_image );  
@@ -174,13 +143,12 @@ double ende_comp = omp_get_wtime();  //Endzeit für Gesamte Ausführung in Varia
   cv::waitKey(0);
   cv::imwrite( "Blurred_Image.jpg", blur );
 
-
   printf("=====Processor: %s, Rank: %d out of %d Processors=====\n", processor_name, world_rank, world_size);
   //std::cout << "==========================================\n";
   std::cout << "RGB: "<< (ende_rgb - start_rgb) << "\n"; //Laufzeit RGB
   std::cout << "Gray: " << (ende_gray - start_gray) << "\n"; //Laufzeit Grayscale
   std::cout << "Blur: "<< (ende_blur - start_blur) << "\n"; //Laufzeit Blured Bild
-  std::cout << "Gesamt: "<< (ende_comp - start_comp) << "\n";
+  std::cout << "Gesamt: "<< (ende_comp - start_comp) << "\n"; //Gesamtlaufzeit
   std::cout << "Threads Used: " << omp_get_max_threads() << "\n";
 
   cv::destroyAllWindows();
